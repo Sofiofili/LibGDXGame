@@ -225,6 +225,11 @@ public class World {
         return false;
     }
     
+    /**
+     * method for the updating of the unstatic GameElments
+     * 
+     * @param delta
+     */
     public void update(float delta) {
         airplaneTimer += delta;
 
@@ -240,6 +245,12 @@ public class World {
         updateBullets(delta);
     }
     
+    /**
+     * method for handling the bullets logic example collision
+     * and removing collided bullets from the list
+     * 
+     * @param delta
+     */
     public void updateBullets(float delta) {
         // Check if the elementMap contains the "Bullet" key and get all bullets
         Set<GameElement> bulletsSet = elementMap.get("Bullet");
@@ -250,6 +261,7 @@ public class World {
             for (GameElement element : bulletsSet) {
                 if (element instanceof Bullet) {
                     Bullet bullet = (Bullet) element;
+                    // update the position of the bullet
                     bullet.update(delta, this);
                     
                     // Check if the bullet is not active anymore and mark it for removal

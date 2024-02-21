@@ -26,7 +26,6 @@ public class Airplane extends GameElement{
                 isActive = false; // Deactivate the airplane after reaching the end
                 t = 0.1f; // Reset t for the next activation
             }
-
             currentPosition.x = startPosition.x + t * (endPosition.x - startPosition.x);
             currentPosition.y = startPosition.y + t * (endPosition.y - startPosition.y);
         }

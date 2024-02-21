@@ -11,8 +11,10 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 
+import model.Airplane;
 import model.Bullet;
 import model.EnemyTank;
+import model.EnemyTank2;
 import model.Explosion;
 import model.GameElement;
 import model.Tank;
@@ -24,6 +26,7 @@ public class WorldRenderer {
     private World world;
     private float stateTime = 0f; // Track the elapsed time for animations
     private float stateTime2 = 0f;
+    private float stateTime3 = 0f;
     // Animation objects for the tank
     private Animation<TextureRegion> tankAnimation;
     private Animation<TextureRegion> enemyTankAnimation;
@@ -38,11 +41,12 @@ public class WorldRenderer {
     }
     
     public void render(SpriteBatch batch, float delta) {
-        // First, draw static objects and tanks
+        // Draw static objects and tanks first
         for (String key : world.elementMap.keySet()) {
             for (GameElement element : world.elementMap.get(key)) {
-                if (!(element instanceof Bullet)) { // Exclude bullets in this pass
-                    if (element instanceof Tank || element instanceof EnemyTank) {
+                // Exclude bullets and the airplane in this pass
+                if (!(element instanceof Bullet) && !(element instanceof Airplane)) {
+                    if (element instanceof Tank || element instanceof EnemyTank || element instanceof EnemyTank2) {
                         // Handle tank and enemy tank animations
                         drawTank(batch, element, delta);
                     } else {
@@ -54,17 +58,25 @@ public class WorldRenderer {
             }
         }
 
-        // Then, draw bullets so they are on top
+        // Then, draw bullets so they are on top of static objects but below the airplane
         Set<GameElement> bulletsSet = world.elementMap.get("Bullet");
         if (bulletsSet != null) {
             for (GameElement bullet : bulletsSet) {
                 drawBullet(batch, bullet);
             }
         }
-        
+
+        // Finally, draw the airplane on top of everything else
+        if (world.airplane.isActive()) {
+            Texture airplaneTexture = TextureFactory.getTexture(world.airplane.getTextureIndex());
+            Vector2 pos = world.airplane.getCurrentPosition();
+            batch.draw(airplaneTexture, pos.x, pos.y, world.airplane.getWidth(), world.airplane.getHeight());
+        }
+
         // Handle explosions separately if they're not part of elementMap
         drawExplosions(batch, delta);
     }
+
 
     
     private void drawBullet(SpriteBatch batch, GameElement bullet) {
@@ -73,12 +85,11 @@ public class WorldRenderer {
     }
 
     private void drawTank(SpriteBatch batch, GameElement tank, float delta) {
-    	
-    	if (tank.getElementType() == "TANK") {
-    		Tank tank1 = (Tank) tank;
-        	
-        	if (tank1.isMoving()) {
-                stateTime += delta;
+        if (tank instanceof Tank) {
+            Tank tank1 = (Tank) tank;
+
+            if (tank1.isMoving()) {
+                stateTime += delta; // Only increment stateTime when the tank is moving
             }
 
             TextureRegion currentFrame = tankAnimation.getKeyFrame(stateTime, true);
@@ -88,12 +99,10 @@ public class WorldRenderer {
                        25, 25, // Assuming these are the correct dimensions for your tank
                        1, 1, // No scaling
                        tank1.getDegrees()); // Apply the tank's current rotation
-
-    	} else {
-    		
-    		EnemyTank tank1 = (EnemyTank) tank;
-        	if (tank1.isMoving()) {
-                stateTime += delta;
+        } else if (tank instanceof EnemyTank) {
+            EnemyTank tank1 = (EnemyTank) tank;
+            if (tank1.isMoving()) {
+                stateTime2 += delta; // Use a separate stateTime for enemy tanks
             }
 
             TextureRegion currentFrame = enemyTankAnimation.getKeyFrame(stateTime2, true);
@@ -103,9 +112,23 @@ public class WorldRenderer {
                        25, 25, // Assuming these are the correct dimensions for your tank
                        1, 1, // No scaling
                        tank1.getDegrees()); // Apply the tank's current rotation
+        }
+        else if (tank instanceof EnemyTank2) {
+            EnemyTank2 tank1 = (EnemyTank2) tank;
+            if (tank1.isMoving()) {
+                stateTime3 += delta; // Use a separate stateTime for enemy tanks
+            }
 
-    	}	
+            TextureRegion currentFrame = enemyTankAnimation.getKeyFrame(stateTime3, true);
+
+            batch.draw(currentFrame, tank1.getX(), tank1.getY(),
+                       12.5f, 12.5f, // This should be half of the width and height if you want to rotate around the center
+                       25, 25, // Assuming these are the correct dimensions for your tank
+                       1, 1, // No scaling
+                       tank1.getDegrees()); // Apply the tank's current rotation
+        }
     }
+
 
     private void drawExplosions(SpriteBatch batch, float delta) {
         Iterator<Explosion> explosionIterator = world.explosions.iterator();
@@ -147,6 +170,19 @@ public class WorldRenderer {
             }
         }
     }
+    
+    public void update(float delta) {
+        // Update the airplane
+        if (world.airplane.isActive()) {
+            world.airplane.update(delta);
+        } else {
+            world.airplaneTimer += delta;
+            if (world.airplaneTimer >= world.airplaneInterval) {
+                world.airplaneTimer = 0;
+                world.airplane.activate(); // Activate the airplane every 10 seconds
+            }
+        }
 
+    }
 
 }

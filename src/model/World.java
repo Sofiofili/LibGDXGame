@@ -13,17 +13,22 @@ import com.badlogic.gdx.utils.Array;
 import view.TextureFactory;
 
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 
 public class World {
     public Tank tank;
     public EnemyTank enemyTank1;
-    public EnemyTank enemyTank2;
+    public EnemyTank2 enemyTank2;
+    public Airplane airplane;
     public GameElement trophy;
     public HashMap<String, Set<GameElement>> elementMap;
     public final int maxScreenCol;
     public final int maxScreenRow;
     private final int TILESIZE = 40;
     public ArrayList<Explosion> explosions;
+    public float airplaneTimer;
+    public float airplaneInterval = 10.0f; // Interval in seconds for airplane appearance
+
 
     public World(int maxScreenCol, int maxScreenRow) {
         explosions = new ArrayList<Explosion>();
@@ -31,10 +36,14 @@ public class World {
         this.maxScreenCol = maxScreenCol;
         this.maxScreenRow = maxScreenRow;
         loadGameElements("tileTypes.txt");
-        tank = new Tank(46, 46, 26, 26);
-        enemyTank1 = new EnemyTank(200, 200, 26, 26);
+        tank = new Tank(46, 46, 24, 20);
         addToElementMap("Tank", tank);
-        addToElementMap("Enemytank", enemyTank1);
+        Vector2 start = new Vector2(-80, 300); // Starting position on the left
+        Vector2 end = new Vector2(800, 100); // Ending position on the right
+        airplane = new Airplane(start, end, 50, 50); // Initialize the airplane
+        airplane.setSpeed(0.5f); // Set the speed of the airplane
+        airplaneTimer = 0;
+        addToElementMap("Airplane", airplane);
     }
 
     private void loadGameElements(String fileName) {
@@ -43,7 +52,9 @@ public class World {
         try {
             File file = new File(fileName);
             scanner = new Scanner(file);
-
+            for (int z = 0; z < 2; z++) {
+            	createTank(scanner, z);
+            }
             for (int y = maxScreenRow - 1; y >= 0; y--) {
                 for (int x = 0; x < maxScreenCol; x++) {
                     if (scanner.hasNextInt()) {
@@ -80,7 +91,31 @@ public class World {
         }
     }
     
-    public void addToElementMap(String type, GameElement element) {
+    private void createTank(Scanner scanner, int index) {
+		// TODO Auto-generated method stub
+		String line = scanner.nextLine();
+		String[] words = line.split(" ");
+		if (words[0].equals("tank")) {
+			float xPosition = Float.parseFloat(words[1]);
+			float yPosition = Float.parseFloat(words[2]);
+			int width = Integer.parseInt(words[3]);
+			int height = Integer.parseInt(words[4]);
+
+			// Now you can use these parsed values to create a new EnemyTank object:
+			
+			if (index == 0) {
+				GameElement enemyTank = new EnemyTank(xPosition, yPosition, width, height, this);
+				addToElementMap("Enemytank" ,enemyTank);
+				enemyTank1 = (EnemyTank) enemyTank;
+			} else {
+				GameElement enemyTank = new EnemyTank2(xPosition, yPosition, width, height, this);
+				addToElementMap("Enemytank2" ,enemyTank);
+				enemyTank2 = (EnemyTank2) enemyTank;
+			}
+		}
+	}
+
+	public void addToElementMap(String type, GameElement element) {
         if (!elementMap.containsKey(type)) {
             elementMap.put(type, new HashSet<GameElement>());
         }
@@ -113,6 +148,59 @@ public class World {
         		}
         	}
         }
+        if (elementMap.containsKey("Enemytank2")) {
+        	for (GameElement enemy : elementMap.get("Enemytank2")) {
+        		if (enemy.getBounds().overlaps(objectBounds) && object.getElementType() == "BULLET") {
+        			EnemyTank2 enemyTank = (EnemyTank2) enemy;
+        			enemyTank.takeDamage(1, this);
+        			return true;
+        		}
+        	}
+        }
         return false;
     }
+    
+    public boolean isPathOpen(float x, float y) {
+        // Check if the position is outside the bounds of the world
+        if (x < 0 || x >= maxScreenCol * TILESIZE || y < 0 || y >= maxScreenRow * TILESIZE) {
+            return false;
+        }
+
+        // Check if the position hits a wall
+        for (GameElement wall : elementMap.get("BrickWall")) {
+            if (wall.getBounds().contains(x, y)) {
+                return false;
+            }
+        }
+        for (GameElement wall : elementMap.get("SteelWall")) {
+            if (wall.getBounds().contains(x, y)) {
+                return false;
+            }
+        }
+
+        // If not outside bounds and not hitting a wall, path is open
+        return true;
+    }
+    public boolean isGroundPathOpen(float x, float y) {
+        // Assuming you have a method or way to get ground elements specifically
+        for (GameElement ground : elementMap.get("Ground")) {
+            if (ground.getBounds().contains(x, y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public void update(float delta) {
+        airplaneTimer += delta;
+
+        // Reactivate the airplane at regular intervals if it's not active
+        if (!airplane.isActive() && airplaneTimer > airplaneInterval) {
+            airplane.activate();
+            airplaneTimer -= airplaneInterval; // Instead of resetting to 0, subtract the interval
+        }
+
+        airplane.update(delta);
+
+    }
+
 }

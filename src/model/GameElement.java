@@ -40,6 +40,12 @@ public abstract class GameElement {
         return textureIndex;
     }
     
+    public void updateBounds() {
+        // Assuming your GameElement class has a Rectangle field named 'bounds'
+        // which represents the bounding box for collision detection
+        this.bounds.setPosition(this.getX(), this.getY());
+    }
+    
     public void setX(float x) {
         this.x = x;
     }

@@ -16,36 +16,54 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class World {
-    public Tank tank;
-    public EnemyTank enemyTank1;
+    public Tank tank; // the players tank
+    public EnemyTank enemyTank1; 
     public EnemyTank2 enemyTank2;
-    public Airplane airplane;
+    public Airplane airplane; // TODO add to elementMap
     public GameElement trophy;
     public HashMap<String, Set<GameElement>> elementMap;
     public final int maxScreenCol;
     public final int maxScreenRow;
     private final int TILESIZE = 40;
-    public ArrayList<Explosion> explosions;
-    public float airplaneTimer;
+    public ArrayList<Explosion> explosions; // array of the explosions. Are drawn when projectile hits a wall
+    public float airplaneTimer; // 
     public float airplaneInterval = 10.0f; // Interval in seconds for airplane appearance
 
-
+    /**
+     * Constructor for the World
+     * 
+     * this is the class where all the elements are added 
+     * the elements are stored in a hashMap
+     * 
+     * the class contains collision detection and the
+     * creation of the game elements
+     * 
+     * @param maxScreenCol 	this indicates how many tiles are on the x axis
+     * 
+     * @param maxScreenRow	this indicates how many tiles are on the y axis
+     */
     public World(int maxScreenCol, int maxScreenRow) {
         explosions = new ArrayList<Explosion>();
         elementMap = new HashMap<String, Set<GameElement>>();
         this.maxScreenCol = maxScreenCol;
         this.maxScreenRow = maxScreenRow;
         loadGameElements("tileTypes.txt");
-        tank = new Tank(46, 46, 24, 20);
+        tank = new Tank(46, 46, 24, 20); // initialize the player tank TODO add this to the txt file
         addToElementMap("Tank", tank);
         Vector2 start = new Vector2(-80, 300); // Starting position on the left
-        Vector2 end = new Vector2(800, 100); // Ending position on the right
+        Vector2 end = new Vector2(850, 100); // Ending position on the right
         airplane = new Airplane(start, end, 50, 50); // Initialize the airplane
         airplane.setSpeed(0.5f); // Set the speed of the airplane
         airplaneTimer = 0;
         addToElementMap("Airplane", airplane);
     }
-
+    
+    
+    /**
+     * Method to read and create the GameElements from the "tileTypes.txt" file
+     * 
+     * @param fileName
+     */
     private void loadGameElements(String fileName) {
     	
         Scanner scanner = null;
@@ -61,6 +79,11 @@ public class World {
                         int textureIndex = scanner.nextInt();
                         float elementX = x * TILESIZE;
                         float elementY = y * TILESIZE;
+                        
+                        /*
+                         * switch case to evaluate witch GameElement to create
+                         */
+                        
                         switch (textureIndex) {
                         case 0:
                             GameElement ground = new Ground(elementX, elementY, TILESIZE, TILESIZE);
@@ -91,8 +114,14 @@ public class World {
         }
     }
     
+    
+    /**
+     * method for the creation of the enemy tanks
+     * 
+     * @param scanner
+     * @param index
+     */
     private void createTank(Scanner scanner, int index) {
-		// TODO Auto-generated method stub
 		String line = scanner.nextLine();
 		String[] words = line.split(" ");
 		if (words[0].equals("tank")) {
@@ -100,8 +129,6 @@ public class World {
 			float yPosition = Float.parseFloat(words[2]);
 			int width = Integer.parseInt(words[3]);
 			int height = Integer.parseInt(words[4]);
-
-			// Now you can use these parsed values to create a new EnemyTank object:
 			
 			if (index == 0) {
 				GameElement enemyTank = new EnemyTank(xPosition, yPosition, width, height, this);
@@ -115,6 +142,12 @@ public class World {
 		}
 	}
 
+    /**
+     * here the game elements are added to the hash map
+     * 
+     * @param type ,this will be the key of the hash map
+     * @param element ,added as the value to the hash map 
+     */
 	public void addToElementMap(String type, GameElement element) {
         if (!elementMap.containsKey(type)) {
             elementMap.put(type, new HashSet<GameElement>());
@@ -181,6 +214,7 @@ public class World {
         // If not outside bounds and not hitting a wall, path is open
         return true;
     }
+    
     public boolean isGroundPathOpen(float x, float y) {
         // Assuming you have a method or way to get ground elements specifically
         for (GameElement ground : elementMap.get("Ground")) {
@@ -190,17 +224,47 @@ public class World {
         }
         return false;
     }
+    
     public void update(float delta) {
         airplaneTimer += delta;
 
         // Reactivate the airplane at regular intervals if it's not active
         if (!airplane.isActive() && airplaneTimer > airplaneInterval) {
             airplane.activate();
-            airplaneTimer -= airplaneInterval; // Instead of resetting to 0, subtract the interval
+            airplaneTimer -= airplaneInterval;
         }
 
         airplane.update(delta);
-
+        enemyTank1.update(delta, this, tank);
+        enemyTank2.update(delta, this, tank);
+        updateBullets(delta);
+    }
+    
+    public void updateBullets(float delta) {
+        // Check if the elementMap contains the "Bullet" key and get all bullets
+        Set<GameElement> bulletsSet = elementMap.get("Bullet");
+        if (bulletsSet != null) {
+            // Since we cannot modify the set while iterating, we collect bullets to remove first
+            List<Bullet> bulletsToRemove = new ArrayList<Bullet>();
+            
+            for (GameElement element : bulletsSet) {
+                if (element instanceof Bullet) {
+                    Bullet bullet = (Bullet) element;
+                    bullet.update(delta, this);
+                    
+                    // Check if the bullet is not active anymore and mark it for removal
+                    if (!bullet.isActive()) {
+                        explosions.add(new Explosion(new Vector2(bullet.getX(), bullet.getY())));
+                        bulletsToRemove.add(bullet);
+                    }
+                }
+            }
+            
+            // Remove the inactive bullets from the set
+            for (Bullet bullet : bulletsToRemove) {
+                bulletsSet.remove(bullet);
+            }
+        }
     }
 
 }

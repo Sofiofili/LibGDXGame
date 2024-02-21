@@ -95,8 +95,8 @@ public class WorldRenderer {
             TextureRegion currentFrame = tankAnimation.getKeyFrame(stateTime, true);
 
             batch.draw(currentFrame, tank1.getX(), tank1.getY(),
-                       12.5f, 12.5f, // This should be half of the width and height if you want to rotate around the center
-                       25, 25, // Assuming these are the correct dimensions for your tank
+                       12.5f, 12.5f, // This should be half of the width and height
+                       25, 25, // size of the texture
                        1, 1, // No scaling
                        tank1.getDegrees()); // Apply the tank's current rotation
         } else if (tank instanceof EnemyTank) {
@@ -108,8 +108,8 @@ public class WorldRenderer {
             TextureRegion currentFrame = enemyTankAnimation.getKeyFrame(stateTime2, true);
 
             batch.draw(currentFrame, tank1.getX(), tank1.getY(),
-                       12.5f, 12.5f, // This should be half of the width and height if you want to rotate around the center
-                       25, 25, // Assuming these are the correct dimensions for your tank
+                       12.5f, 12.5f, // This should be half of the width and height
+                       25, 25, // size of the texture
                        1, 1, // No scaling
                        tank1.getDegrees()); // Apply the tank's current rotation
         }
@@ -144,32 +144,7 @@ public class WorldRenderer {
         }
     }
     
-    public void updateBullets(float delta) {
-        // Check if the elementMap contains the "Bullet" key and get all bullets
-        Set<GameElement> bulletsSet = world.elementMap.get("Bullet");
-        if (bulletsSet != null) {
-            // Since we cannot modify the set while iterating, we collect bullets to remove first
-            List<Bullet> bulletsToRemove = new ArrayList<Bullet>();
-            
-            for (GameElement element : bulletsSet) {
-                if (element instanceof Bullet) {
-                    Bullet bullet = (Bullet) element;
-                    bullet.update(delta, world);
-                    
-                    // Check if the bullet is not active anymore and mark it for removal
-                    if (!bullet.isActive()) {
-                        world.explosions.add(new Explosion(new Vector2(bullet.getX(), bullet.getY())));
-                        bulletsToRemove.add(bullet);
-                    }
-                }
-            }
-            
-            // Remove the inactive bullets from the set
-            for (Bullet bullet : bulletsToRemove) {
-                bulletsSet.remove(bullet);
-            }
-        }
-    }
+    
     
     public void update(float delta) {
         // Update the airplane

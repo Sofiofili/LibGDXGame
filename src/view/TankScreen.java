@@ -29,9 +29,6 @@ public class TankScreen implements Screen{
     @Override
     public void render(float delta) {
     	inputHandler.update(delta);
-    	worldRenderer.updateBullets(delta);
-    	world.enemyTank1.update(delta, world, world.tank);
-    	world.enemyTank2.update(delta, world, world.tank);
     	world.update(delta);
         batch.begin();
         worldRenderer.render(batch, delta);

@@ -1,5 +1,6 @@
 package view;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -29,7 +30,16 @@ public class TankScreen implements Screen{
     @Override
     public void render(float delta) {
     	inputHandler.update(delta);
+    	worldRenderer.updateBullets(delta);
+    	world.enemyTank1.update(delta, world, world.tank);
+    	world.enemyTank2.update(delta, world, world.tank);
     	world.update(delta);
+    	
+    	if(world.isGameOver()) {
+            ((Game)Gdx.app.getApplicationListener()).setScreen(new GameOverScreen());
+            return; // Prevents further rendering and updating after the game over screen is set
+        }
+    	
         batch.begin();
         worldRenderer.render(batch, delta);
         batch.end();

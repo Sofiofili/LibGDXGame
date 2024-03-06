@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 import model.Bullet;
+import model.PlayerBullet;
 import model.Tank;
 import model.World;
 
@@ -23,7 +24,8 @@ public class InputHandler extends InputAdapter {
     public boolean keyDown(int keycode) {
         if (keycode == Keys.SPACE) {
             Vector2 gunPosition = tank.getGunPosition();
-            Bullet bullet = new Bullet(gunPosition.x, gunPosition.y, tank.getOrientation());
+            Vector2 direction = tank.computeDirection();
+            PlayerBullet bullet = new PlayerBullet(gunPosition.x, gunPosition.y, direction);
             world.addToElementMap("Bullet", bullet);
             return true;
         }
@@ -58,7 +60,7 @@ public class InputHandler extends InputAdapter {
         Rectangle tempBounds = new Rectangle(potentialX, potentialY, tank.getWidth(), tank.getHeight());
 
         // Check for collision with the potential new position
-        if (!world.checkCollisionWithWalls(tempBounds, world.tank)) {
+        if (!world.checkCollisionWithWalls(tempBounds, tank)) {
         	tank.setIsMoving(true);
             // If no collision, move the tank using its move methods
             if (Gdx.input.isKeyPressed(Keys.UP)) {

@@ -16,61 +16,43 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class World {
-    public Tank tank; // the players tank
-    public EnemyTank enemyTank1; 
+	private long startTime;
+    public Tank tank;
+    public EnemyTank enemyTank1;
     public EnemyTank2 enemyTank2;
-    public Airplane airplane; // TODO add to elementMap
+    public Airplane airplane;
     public GameElement trophy;
     public HashMap<String, Set<GameElement>> elementMap;
     public final int maxScreenCol;
     public final int maxScreenRow;
     private final int TILESIZE = 40;
-    public ArrayList<Explosion> explosions; // array of the explosions. Are drawn when projectile hits a wall
-    public float airplaneTimer; // 
+    public ArrayList<Explosion> explosions;
+    public float airplaneTimer;
     public float airplaneInterval = 10.0f; // Interval in seconds for airplane appearance
 
-    /**
-     * Constructor for the World
-     * 
-     * this is the class where all the elements are added 
-     * the elements are stored in a hashMap
-     * 
-     * the class contains collision detection and the
-     * creation of the game elements
-     * 
-     * @param maxScreenCol 	this indicates how many tiles are on the x axis
-     * 
-     * @param maxScreenRow	this indicates how many tiles are on the y axis
-     */
+
     public World(int maxScreenCol, int maxScreenRow) {
         explosions = new ArrayList<Explosion>();
         elementMap = new HashMap<String, Set<GameElement>>();
         this.maxScreenCol = maxScreenCol;
         this.maxScreenRow = maxScreenRow;
         loadGameElements("tileTypes.txt");
-        tank = new Tank(46, 46, 24, 20); // initialize the player tank TODO add this to the txt file
-        addToElementMap("Tank", tank);
         Vector2 start = new Vector2(-80, 300); // Starting position on the left
-        Vector2 end = new Vector2(850, 100); // Ending position on the right
+        Vector2 end = new Vector2(800, 100); // Ending position on the right
         airplane = new Airplane(start, end, 50, 50); // Initialize the airplane
         airplane.setSpeed(0.5f); // Set the speed of the airplane
         airplaneTimer = 0;
         addToElementMap("Airplane", airplane);
+        startTime = System.currentTimeMillis();
     }
-    
-    
-    /**
-     * Method to read and create the GameElements from the "tileTypes.txt" file
-     * 
-     * @param fileName
-     */
+
     private void loadGameElements(String fileName) {
     	
         Scanner scanner = null;
         try {
             File file = new File(fileName);
             scanner = new Scanner(file);
-            for (int z = 0; z < 2; z++) {
+            for (int z = 0; z < 4; z++) {
             	createTank(scanner, z);
             }
             for (int y = maxScreenRow - 1; y >= 0; y--) {
@@ -79,11 +61,6 @@ public class World {
                         int textureIndex = scanner.nextInt();
                         float elementX = x * TILESIZE;
                         float elementY = y * TILESIZE;
-                        
-                        /*
-                         * switch case to evaluate witch GameElement to create
-                         */
-                        
                         switch (textureIndex) {
                         case 0:
                             GameElement ground = new Ground(elementX, elementY, TILESIZE, TILESIZE);
@@ -114,40 +91,42 @@ public class World {
         }
     }
     
-    
-    /**
-     * method for the creation of the enemy tanks
-     * 
-     * @param scanner
-     * @param index
-     */
     private void createTank(Scanner scanner, int index) {
+		// TODO Auto-generated method stub
 		String line = scanner.nextLine();
 		String[] words = line.split(" ");
+		float xPosition = Float.parseFloat(words[1]);
+		float yPosition = Float.parseFloat(words[2]);
+		int width = Integer.parseInt(words[3]);
+		int height = Integer.parseInt(words[4]);
 		if (words[0].equals("tank")) {
-			float xPosition = Float.parseFloat(words[1]);
-			float yPosition = Float.parseFloat(words[2]);
-			int width = Integer.parseInt(words[3]);
-			int height = Integer.parseInt(words[4]);
+
+			// Now you can use these parsed values to create a new EnemyTank object:
+			
 			
 			if (index == 0) {
 				GameElement enemyTank = new EnemyTank(xPosition, yPosition, width, height, this);
 				addToElementMap("Enemytank" ,enemyTank);
 				enemyTank1 = (EnemyTank) enemyTank;
-			} else {
+			}
+			else if (index == 2) {
+				int lives = Integer.parseInt(words[5]);
+				this.tank = new Tank(xPosition, yPosition, width, height, lives);
+				addToElementMap("Tank" ,tank);
+			}
+			else {
 				GameElement enemyTank = new EnemyTank2(xPosition, yPosition, width, height, this);
 				addToElementMap("Enemytank2" ,enemyTank);
 				enemyTank2 = (EnemyTank2) enemyTank;
 			}
+		} else {
+
+			GameElement trophy = new Trophy(xPosition, yPosition, width, height);
+			addToElementMap("Trophy", trophy);
+			
 		}
 	}
 
-    /**
-     * here the game elements are added to the hash map
-     * 
-     * @param type ,this will be the key of the hash map
-     * @param element ,added as the value to the hash map 
-     */
 	public void addToElementMap(String type, GameElement element) {
         if (!elementMap.containsKey(type)) {
             elementMap.put(type, new HashSet<GameElement>());
@@ -159,7 +138,7 @@ public class World {
         if (elementMap.containsKey("BrickWall")) {
             for (GameElement wall : elementMap.get("BrickWall")) {
                 if (wall.getBounds().overlaps(objectBounds)) {
-                	if (object.getElementType() == "BULLET") {
+                	if (object instanceof PlayerBullet) {
                 		Destroyable destroyableElement = (Destroyable) wall;
                         destroyableElement.takeDamage(1, this); // Assuming each bullet does 1 damage
                 	}
@@ -174,22 +153,35 @@ public class World {
         }
         if (elementMap.containsKey("Enemytank")) {
         	for (GameElement enemy : elementMap.get("Enemytank")) {
-        		if (enemy.getBounds().overlaps(objectBounds) && object.getElementType() == "BULLET") {
-        			EnemyTank enemyTank = (EnemyTank) enemy;
-        			enemyTank.takeDamage(1, this);
-        			return true;
+        		if (enemy.getBounds().overlaps(objectBounds) && object instanceof Bullet) {
+        			if (object instanceof PlayerBullet) {
+        				EnemyTank enemyTank = (EnemyTank) enemy;
+            			enemyTank.takeDamage(1, this);
+            			return true;
+        			}	
         		}
         	}
         }
         if (elementMap.containsKey("Enemytank2")) {
         	for (GameElement enemy : elementMap.get("Enemytank2")) {
-        		if (enemy.getBounds().overlaps(objectBounds) && object.getElementType() == "BULLET") {
-        			EnemyTank2 enemyTank = (EnemyTank2) enemy;
-        			enemyTank.takeDamage(1, this);
-        			return true;
+        		if (enemy.getBounds().overlaps(objectBounds) && object instanceof Bullet) {
+        			if (object instanceof PlayerBullet) { 
+
+            			EnemyTank2 enemyTank = (EnemyTank2) enemy;
+            			enemyTank.takeDamage(1, this);
+            			return true;
+        			}
         		}
         	}
         }
+        if (this.tank != null && this.tank.getBounds() != null) {
+            if (this.tank.getBounds().overlaps(objectBounds) && object instanceof EnemyBullet) {
+                this.tank.takeDamage(1, this);
+                return true;
+            }
+        }
+
+        
         return false;
     }
     
@@ -214,7 +206,6 @@ public class World {
         // If not outside bounds and not hitting a wall, path is open
         return true;
     }
-    
     public boolean isGroundPathOpen(float x, float y) {
         // Assuming you have a method or way to get ground elements specifically
         for (GameElement ground : elementMap.get("Ground")) {
@@ -224,59 +215,49 @@ public class World {
         }
         return false;
     }
-    
-    /**
-     * method for the updating of the unstatic GameElments
-     * 
-     * @param delta
-     */
     public void update(float delta) {
         airplaneTimer += delta;
 
         // Reactivate the airplane at regular intervals if it's not active
         if (!airplane.isActive() && airplaneTimer > airplaneInterval) {
             airplane.activate();
-            airplaneTimer -= airplaneInterval;
+            airplaneTimer -= airplaneInterval; // Instead of resetting to 0, subtract the interval
         }
 
         airplane.update(delta);
-        enemyTank1.update(delta, this, tank);
-        enemyTank2.update(delta, this, tank);
-        updateBullets(delta);
+
+    }
+
+    public float getTime() {
+        long currentTime = System.currentTimeMillis(); // Get the current time
+        return (currentTime - startTime) / 1000.0f; // Return the difference in seconds
+    }
+
+    public void respawnTank(int remainingLives) {
+    	tank.setPosition(46, 46);
+    	tank.setHealth(2);
     }
     
-    /**
-     * method for handling the bullets logic example collision
-     * and removing collided bullets from the list
-     * 
-     * @param delta
-     */
-    public void updateBullets(float delta) {
-        // Check if the elementMap contains the "Bullet" key and get all bullets
-        Set<GameElement> bulletsSet = elementMap.get("Bullet");
-        if (bulletsSet != null) {
-            // Since we cannot modify the set while iterating, we collect bullets to remove first
-            List<Bullet> bulletsToRemove = new ArrayList<Bullet>();
-            
-            for (GameElement element : bulletsSet) {
-                if (element instanceof Bullet) {
-                    Bullet bullet = (Bullet) element;
-                    // update the position of the bullet
-                    bullet.update(delta, this);
-                    
-                    // Check if the bullet is not active anymore and mark it for removal
-                    if (!bullet.isActive()) {
-                        explosions.add(new Explosion(new Vector2(bullet.getX(), bullet.getY())));
-                        bulletsToRemove.add(bullet);
-                    }
-                }
-            }
-            
-            // Remove the inactive bullets from the set
-            for (Bullet bullet : bulletsToRemove) {
-                bulletsSet.remove(bullet);
+    public void removeTank(Tank tank) {
+        // Remove the tank from the elementMap or other collections
+        Set<GameElement> tanks = elementMap.get("Tank");
+        if (tanks != null) {
+            tanks.remove(tank);
+            if (tanks.isEmpty()) {
+                elementMap.remove("Tank");
             }
         }
+        
+        // Nullify the reference if it's directly accessible
+        this.tank = null;
     }
+    
+    public boolean isGameOver() {
+    	if (tank == null) {
+    		return true;
+    	}
+        return false; // Assuming you have a getLives method in your Tank class
+    }
+
 
 }

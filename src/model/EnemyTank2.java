@@ -12,7 +12,10 @@ import com.badlogic.gdx.math.Vector2;
 public class EnemyTank2 extends GameElement implements Movable, Destroyable{
 
 	private Random random = new Random();
-
+	private Vector2 startPosition;
+	private float lastShotTime; // Time since the last shot was fired
+	private float defaultShootInterval = 2.0f; // Shoot every 2 seconds by default
+	private float alignedShootInterval = 1.0f; // Shoot every 1 second when aligned
 	private Vector2 targetPosition;
 	private World world;
 	private int health = 2;
@@ -23,7 +26,7 @@ public class EnemyTank2 extends GameElement implements Movable, Destroyable{
         UP, DOWN, LEFT, RIGHT
     }
 	private Orientation orientation = Orientation.UP;
-    private float speed = 1;
+    private float speed = 0.7f;
     private int degrees = 0;
 	
 	public EnemyTank2(float x, float y, int height, int width, World world) {
@@ -31,6 +34,7 @@ public class EnemyTank2 extends GameElement implements Movable, Destroyable{
         super(x, y, height, width, "ENEMYTANK", 9);
         this.targetPosition = new Vector2();
         this.world = world;
+        this.startPosition = new Vector2(x, y);
     }
 	
 	public void setOrientation(Orientation newOrientation) {
@@ -68,11 +72,45 @@ public class EnemyTank2 extends GameElement implements Movable, Destroyable{
     }
 
     public void update(float delta, World world, Tank playerTank) {
+    	if (playerTank == null) return;
+    	Vector2 playerPosition = new Vector2(playerTank.getX(), playerTank.getY());
+
+	    // Check alignment with the player
+	    boolean alignedWithPlayer = isAlignedWithPlayer(playerPosition);
+
+	    // Calculate the time elapsed since the last shot
+	    float timeSinceLastShot = world.getTime() - lastShotTime;
+
+	    // Determine the appropriate shooting interval based on alignment
+	    float currentShootInterval = alignedWithPlayer ? alignedShootInterval : defaultShootInterval;
+
+	    // Shooting logic based on alignment and timing
+	    if (timeSinceLastShot >= currentShootInterval) {
+	        shoot();
+	        lastShotTime = world.getTime(); // Update the last shot time to the current time
+	    }
+        
         if (isAtIntersectionOrEdge()) {
             chooseRandomDirection(world);
         }
         moveInCurrentDirection(delta, world);
     }
+    
+    private boolean isAlignedWithPlayer(Vector2 playerPosition) {
+	    // Check if the tank is facing towards the player position
+	    switch (orientation) {
+	        case UP:
+	            return this.getY() < playerPosition.y && Math.abs(this.getX() - playerPosition.x) < this.getWidth() / 2;
+	        case DOWN:
+	            return this.getY() > playerPosition.y && Math.abs(this.getX() - playerPosition.x) < this.getWidth() / 2;
+	        case LEFT:
+	            return this.getX() > playerPosition.x && Math.abs(this.getY() - playerPosition.y) < this.getHeight() / 2;
+	        case RIGHT:
+	            return this.getX() < playerPosition.x && Math.abs(this.getY() - playerPosition.y) < this.getHeight() / 2;
+	        default:
+	            return false;
+	    }
+	}
 
     private boolean isAtIntersectionOrEdge() {
         int openPaths = 0;
@@ -225,11 +263,35 @@ public class EnemyTank2 extends GameElement implements Movable, Destroyable{
         return isMoving;
     }
 
-	@Override
-	public void shoot() {
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public void shoot() {
+        Vector2 direction = new Vector2();
+        
+        // Calculate the bullet's direction based on the tank's orientation
+        switch (this.orientation) {
+            case UP:
+                direction.set(0, 1); // Move up
+                break;
+            case DOWN:
+                direction.set(0, -1); // Move down
+                break;
+            case LEFT:
+                direction.set(-1, 0); // Move left
+                break;
+            case RIGHT:
+                direction.set(1, 0); // Move right
+                break;
+        }
+
+        // Get the gun position based on the tank's current orientation and position
+        Vector2 gunPosition = getGunPosition();
+
+        // Assuming you have a class similar to EnemyBullet that accepts a Vector2 for direction
+        // And that you have a method in your World class to add bullets to the game
+        EnemyBullet bullet = new EnemyBullet(gunPosition.x, gunPosition.y, direction);
+        world.addToElementMap("Bullet", bullet);
+    }
+
 	
 	public Vector2 getGunPosition() {
 	    Vector2 gunPosition = new Vector2();
@@ -275,15 +337,21 @@ public class EnemyTank2 extends GameElement implements Movable, Destroyable{
 
 	@Override
 	public void onDestroy(World world) {
-		Set<GameElement> enemyTanks = world.elementMap.get("Enemytank2");
-        if (enemyTanks != null) {
-            // Remove the specific BrickWall instance from the set
-            enemyTanks.remove(this);
+	    // Reset the tank's position to its starting location
+	    this.setX(startPosition.x);
+	    this.setY(startPosition.y);
+	    
+	    // Reset the tank's health
+	    this.health = 2; // Assuming 2 is the starting health
+	    
+	    // Reset any other relevant properties to their starting values
+	    this.lastShotTime = 0; // Reset the shooting timer
+	    this.isMoving = false; // Reset movement status
 
-            // Optionally, if the set becomes empty, you might decide to remove the key from the map
-            if (enemyTanks.isEmpty()) {
-                world.elementMap.remove("Enemytank2");
-            }
-        }
 	}
+
+	
+	 public Vector2 getPosition() {
+	    	return position;
+	    }
 }

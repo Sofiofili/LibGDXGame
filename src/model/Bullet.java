@@ -4,28 +4,43 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
-
-
-public class Bullet extends GameElement{
-	
+public abstract class Bullet extends GameElement {
 	public enum Orientation {
         UP, DOWN, LEFT, RIGHT
     }
-	
+	private Orientation orientation = Orientation.UP;
     private Vector2 position;
+    private Vector2 direction; // Direction vector
     private float speed = 350;
     private boolean active;
-    private Tank.Orientation orientation;
-    
 
-    public Bullet(float x, float y, Tank.Orientation orientation) {
-    	super(x, y, 10, 10, "BULLET", 50);
-    	this.orientation = orientation;
+    public Bullet(float x, float y, Vector2 direction) {
+        super(x, y, 10, 10, "BULLET", 50);
         this.position = new Vector2(x, y);
+        this.direction = direction.nor(); // Normalize the direction vector
         this.active = true;
+
+        // Determine orientation based on the direction vector
+        if (Math.abs(direction.x) > Math.abs(direction.y)) {
+            // Horizontal movement
+            if (direction.x > 0) {
+                orientation = Orientation.RIGHT;
+            } else {
+                orientation = Orientation.LEFT;
+            }
+        } else {
+            // Vertical movement
+            if (direction.y > 0) {
+                orientation = Orientation.UP;
+            } else {
+                orientation = Orientation.DOWN;
+            }
+        }
     }
 
+
     public void update(float delta, World world) {
+    	
         // Move the bullet based on its orientation
         switch (orientation) {
             case UP:
@@ -59,25 +74,7 @@ public class Bullet extends GameElement{
         }
     }
 
-    
-    public void setOrientation(Tank.Orientation newOrientation) {
-        this.orientation = newOrientation;
-    }
-
-    public float getRotation() {
-        switch (orientation) {
-            case UP:
-                return 0;
-            case DOWN:
-                return 180;
-            case LEFT:
-                return 90;
-            case RIGHT:
-                return 270;
-            default:
-                return 0; // Default case, should not happen
-        }
-    }
+    // Removed setOrientation method since we're not using Orientation anymore
 
     public boolean isActive() {
         return active;

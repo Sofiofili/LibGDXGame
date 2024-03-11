@@ -48,7 +48,7 @@ public class WorldRenderer {
     public void render(SpriteBatch batch, float delta) {
         // Draw static objects and tanks
         for (String key : world.elementMap.keySet()) {
-            if (!key.equals("Trophy")) { // Skip the trophy for now
+            if (!key.equals("Trophy") && !key.equals("Coin")) { // Skip the trophy for now
                 for (GameElement element : world.elementMap.get(key)) {
                     // Exclude bullets and the airplane in this pass
                     if (!(element instanceof Bullet) && !(element instanceof Airplane)) {
@@ -59,14 +59,17 @@ public class WorldRenderer {
         }
 
         // Then, draw bullets so they are on top of static objects but below the airplane
-        drawBullets(batch);
+        drawElement(batch, "Bullet");
 
         // Draw the airplane
         drawAirplane(batch);
 
         // Draw the trophy last so it appears on top of everything else
-        drawTrophy(batch);
-
+        drawElement(batch, "Trophy");
+        
+        // Draw coins onto the map
+        drawElement(batch, "Coin");
+        
         // Display lives in the top right corner
         displayLives(batch);
         
@@ -74,15 +77,16 @@ public class WorldRenderer {
         drawExplosions(batch, delta);
     }
     
-    private void drawTrophy(SpriteBatch batch) {
-        Set<GameElement> trophySet = world.elementMap.get("Trophy");
-        if (trophySet != null) {
-            for (GameElement trophy : trophySet) {
-                Texture texture = TextureFactory.getTexture(trophy.getTextureIndex());
-                batch.draw(texture, trophy.getX(), trophy.getY(), trophy.getWidth(), trophy.getHeight());
+    private void drawElement(SpriteBatch batch, String elementType) {
+		// TODO Auto-generated method stub
+		Set<GameElement> set = world.elementMap.get(elementType);
+		if (set != null) {
+			for (GameElement element : set) {
+                Texture texture = TextureFactory.getTexture(element.getTextureIndex());
+                batch.draw(texture, element.getX(), element.getY(), element.getWidth(), element.getHeight());
             }
-        }
-    }
+		}
+	}
     
     private void displayLives(SpriteBatch batch) {
         if (world.tank != null) {
@@ -101,15 +105,6 @@ public class WorldRenderer {
         }
     }
     
-    private void drawBullets(SpriteBatch batch) {
-        Set<GameElement> bulletsSet = world.elementMap.get("Bullet");
-        if (bulletsSet != null) {
-            for (GameElement bullet : bulletsSet) {
-                Texture texture = TextureFactory.getTexture(bullet.getTextureIndex());
-                batch.draw(texture, bullet.getX(), bullet.getY(), bullet.getWidth(), bullet.getHeight());
-            }
-        }
-    }
     
     private void drawElement(SpriteBatch batch, GameElement element, float delta) {
         if (element instanceof Tank || element instanceof EnemyTank || element instanceof EnemyTank2) {

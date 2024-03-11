@@ -35,6 +35,10 @@ public class TankScreen implements Screen{
     	world.enemyTank2.update(delta, world, world.tank);
     	world.update(delta);
     	
+    	if(world.gameWon) {
+    		((Game)Gdx.app.getApplicationListener()).setScreen(new VictoryScreen(world.getTime()));
+    	}
+    	
     	if(world.isGameOver()) {
             ((Game)Gdx.app.getApplicationListener()).setScreen(new GameOverScreen());
             return; // Prevents further rendering and updating after the game over screen is set

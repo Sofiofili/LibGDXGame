@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
@@ -16,6 +17,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class World {
+	public boolean gameWon = false;
 	private long startTime;
     public Tank tank;
     public EnemyTank enemyTank1;
@@ -32,11 +34,13 @@ public class World {
 
 
     public World(int maxScreenCol, int maxScreenRow) {
+    	
         explosions = new ArrayList<Explosion>();
         elementMap = new HashMap<String, Set<GameElement>>();
         this.maxScreenCol = maxScreenCol;
         this.maxScreenRow = maxScreenRow;
         loadGameElements("tileTypes.txt");
+        loadCoinsToGame("Coins.txt");
         Vector2 start = new Vector2(-80, 300); // Starting position on the left
         Vector2 end = new Vector2(800, 100); // Ending position on the right
         airplane = new Airplane(start, end, 50, 50); // Initialize the airplane
@@ -46,7 +50,28 @@ public class World {
         startTime = System.currentTimeMillis();
     }
 
-    private void loadGameElements(String fileName) {
+    private void loadCoinsToGame(String string) {
+		Scanner scanner = null;
+		try {
+			File file = new File(string);
+			scanner = new Scanner(file);
+			while (scanner.hasNext()) {
+				String line = scanner.nextLine();
+				String[] words = line.split(" ");
+				
+				Coin coin = new Coin(Integer.parseInt(words[1]), Integer.parseInt(words[2]), 30, 30);
+				addToElementMap("Coin", coin);
+			}
+		} catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            if (scanner != null) {
+                scanner.close();
+            }
+        }
+	}
+
+	private void loadGameElements(String fileName) {
     	
         Scanner scanner = null;
         try {
@@ -92,7 +117,6 @@ public class World {
     }
     
     private void createTank(Scanner scanner, int index) {
-		// TODO Auto-generated method stub
 		String line = scanner.nextLine();
 		String[] words = line.split(" ");
 		float xPosition = Float.parseFloat(words[1]);
@@ -100,10 +124,6 @@ public class World {
 		int width = Integer.parseInt(words[3]);
 		int height = Integer.parseInt(words[4]);
 		if (words[0].equals("tank")) {
-
-			// Now you can use these parsed values to create a new EnemyTank object:
-			
-			
 			if (index == 0) {
 				GameElement enemyTank = new EnemyTank(xPosition, yPosition, width, height, this);
 				addToElementMap("Enemytank" ,enemyTank);
@@ -146,6 +166,31 @@ public class World {
                 }
             }
         }
+        
+        if (object instanceof Tank) {
+        	
+        	if (noCoins()) {
+        		Set<GameElement> trophySet = elementMap.get("Trophy");
+        		
+        		for (GameElement trophy : trophySet) {
+                    if (trophy.getBounds().overlaps(tank.getBounds())) {
+                        gameWon = true;
+                        break; // Exit the loop once the winning condition is met
+                    }
+                }
+        	}
+        }
+       
+        if (object instanceof Tank && elementMap.containsKey("Coin")) {
+            Iterator<GameElement> iterator = elementMap.get("Coin").iterator();
+            while (iterator.hasNext()) {
+                GameElement coin = iterator.next();
+                if (coin.getBounds().overlaps(object.getBounds())) {
+                    iterator.remove(); // Safely remove the coin
+                }
+            }
+        }
+
         if (elementMap.containsKey("SteelWall")) {
             for (GameElement wall : elementMap.get("SteelWall")) {
                 if (wall.getBounds().overlaps(objectBounds)) return true;
@@ -180,12 +225,18 @@ public class World {
                 return true;
             }
         }
-
         
         return false;
     }
     
-    public boolean isPathOpen(float x, float y) {
+    private boolean noCoins() {
+        Set<GameElement> coins = elementMap.get("Coin");
+        // Return true if coins is null or empty, indicating no coins left
+        return (coins == null || coins.isEmpty());
+    }
+
+
+	public boolean isPathOpen(float x, float y) {
         // Check if the position is outside the bounds of the world
         if (x < 0 || x >= maxScreenCol * TILESIZE || y < 0 || y >= maxScreenRow * TILESIZE) {
             return false;
@@ -256,7 +307,7 @@ public class World {
     	if (tank == null) {
     		return true;
     	}
-        return false; // Assuming you have a getLives method in your Tank class
+        return false;
     }
 
 
